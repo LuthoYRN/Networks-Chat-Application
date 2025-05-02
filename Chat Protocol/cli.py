@@ -1,6 +1,10 @@
 import asyncio
+import os
 from chat_client import ChatClient
 
+def clear_terminal():
+    os.system('cls' if os.name == 'nt' else 'clear') 
+    
 def print_menu():
     print("\nAvailable commands:")
 
@@ -33,25 +37,27 @@ async def prompt_loop(client: ChatClient):
         user_input = await asyncio.get_event_loop().run_in_executor(None, input, "> ")
         user_input = user_input.strip()
 
+        if not client.connect:
+            break
         if user_input == "/connect":
             if client.connected:
                 print("[!] Already connected.")
             else:
                 await client.connect()
                 if client.connected:
+                    asyncio.create_task(client.receive_loop())
+                    asyncio.create_task(client.ping())
                     print_menu()  # Show commands again after successful connect
 
         elif user_input == "/quit":
-            print("[*] Exiting...")
-            break
-
+            await client.disconnect()
         else:
             print("[!] Unknown command.")
             print_menu()
 
 async def main():
     client = ChatClient()
-    await prompt_loop(client)
+    await prompt_loop(client) #cli options
 
 if __name__ == "__main__":
     asyncio.run(main())
