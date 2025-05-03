@@ -86,11 +86,23 @@ async def prompt_loop(client: ChatClient):
                                 else:
                                     await client.join_channel(parts[1].strip())
                             elif user_input.startswith("/channels"):
-                                parts = user_input.split(" ")
+                                parts = user_input.split(" ",1)
                                 offset = 0
                                 if len(parts) == 2 and parts[1].isdigit():
                                     offset = int(parts[1])
                                 await client.list_channels(offset)
+                            elif user_input.startswith("/leave "):
+                                parts = user_input.split(" ", 1)
+                                if len(parts) < 2 or not parts[1].strip():
+                                    error_msg("[!] Usage: /leave <channel>")
+                                else:
+                                    await client.leave_channel(parts[1].strip())
+                            elif user_input.startswith("/info "):
+                                parts = user_input.split(" ", 1)
+                                if len(parts) < 2 or not parts[1].strip():
+                                    error_msg("[!] Usage: /info <channel>")
+                                else:
+                                    await client.channel_info(parts[1].strip())
                         #user commands
                             else:
                                 error_msg("[!] Unknown command.")

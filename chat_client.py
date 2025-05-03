@@ -73,7 +73,7 @@ class ChatClient:
             username = response.get("username")
             channel = response.get("channel")
             if not response.get("response_handle"):
-                server_msg(f"[+] {username} joined {channel}")
+                server_msg(f"[Server] {username} joined {channel}")
             else:
                 desc = response.get("description")
                 server_msg(f"[Server] You joined | {channel}: {desc}")
@@ -88,6 +88,23 @@ class ChatClient:
                     server_msg(f"[Server] • {ch}")
                 if next_page:
                     progress_msg("[*] More channels available. Use: /channels <offset>")
+        elif response_type == 29:  # CHANNEL_LEFT_response
+            username = response.get("username")
+            channel = response.get("channel")
+            if not response.get("response_handle"):
+                server_msg(f"[Server] {username} left {channel}")
+            else:
+                server_msg(f"[Server] You left {channel}")
+        elif response_type == 27:  # CHANNEL_INFO_response
+            channel = response.get("channel")
+            description = response.get("description", "")
+            members = response.get("members", [])
+
+            server_msg(f"[Server] - Channel Name : {channel}")
+            server_msg(f"[Server] - Description  : {description}")
+            server_msg(f"[Server] - Members ({len(members)})  :")
+            for user in members:
+                server_msg(f"[Server]     • {user}")
 
     #protocol functions
     async def connect(self):
@@ -188,7 +205,7 @@ class ChatClient:
             else:
                 request_handle = random.getrandbits(32)
                 packet = {
-                    "request_type": 7,  # CHANNEL_JOIN
+                    "request_type": 7,  
                     "session": self.session,
                     "request_handle": request_handle,
                     "channel": channel
@@ -199,9 +216,37 @@ class ChatClient:
         if self.connected:
            request_handle = random.getrandbits(32)
            packet = {
-                "request_type": 5,  # CHANNEL_LIST
+                "request_type": 5,  
                 "session": self.session,
                 "request_handle": request_handle,
                 "offset": offset  # Optional
            }
            self.send(packet)
+
+    async def leave_channel(self, channel: str):
+        if self.connected:
+            if not channel or len(channel) > 20:
+                error_msg("[!] Invalid channel name.")
+            else:
+                request_handle = random.getrandbits(32)
+                packet = {
+                    "request_type": 8,  
+                    "session": self.session,
+                    "request_handle": request_handle,
+                    "channel": channel
+                }
+                self.send(packet)
+
+    async def channel_info(self, channel: str):
+        if self.connected:
+            if not channel or len(channel) > 20:
+                error_msg("[!] Invalid channel name.")
+            else:
+                request_handle = random.getrandbits(32)
+                packet = {
+                    "request_type": 6,  
+                    "session": self.session,
+                    "request_handle": request_handle,
+                    "channel": channel
+                }
+                self.send(packet)
