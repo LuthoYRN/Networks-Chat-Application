@@ -2,11 +2,10 @@ import asyncio
 import socket
 import msgpack
 import random
+from utility import *
 
 SERVER_HOST = 'csc4026z.link'
 SERVER_PORT = 51825  #clear text
-def safe_print(message):
-    print(f"\r{message}\n> ", end="", flush=True)
 
 class ChatClient:
     def __init__(self): #constructor
@@ -31,7 +30,7 @@ class ChatClient:
                 message = msgpack.unpackb(data)
                 await self.handle_message(message)
             except Exception as e:
-                safe_print("[!] Error receiving message:", e)
+                server_msg(f"[!] Error receiving message: {e}")
     
     async def handle_message(self, response: dict):
         response_type = response.get("response_type")
@@ -39,34 +38,33 @@ class ChatClient:
             self.session = response["session"]
             self.username = response["username"]
             self.connected = True
-            print(f"[+] Connected successfully! Assigned username: {self.username}")
             message = response["message"]
-            print(f"[Server] {message}")  
+            server_msg(f"[Server] {message}")  
         elif response_type == 22 and not response.get("username"):  # DISCONNECT_response
             self.session = None
             self.connected = False
             message = response["message"]
-            safe_print("[Server]",message)
+            server_msg(f"[Server] {message}")  
         elif response_type == 24:  # PING response
-            safe_print("[Server] Pong received.")
+            server_msg("[Server] Pong received.")
         elif response_type == 21:  # OK
-            safe_print("[Server] OK")
+            server_msg("[Server] OK")
         elif response_type == 20:  # ERROR
             error_msg = response.get("error")
-            safe_print(f"[Server ERROR] {error_msg}")
+            server_msg(f"[Server ERROR] {error_msg}")
         elif response_type == 36:  # SERVER_MESSAGE
             text = response.get("message")
-            safe_print(f"[Broadcast] {text}")
+            server_msg(f"[Broadcast] {text}")
         elif response_type == 37:  # SERVER_SHUTDOWN
-            safe_print("[Server] Shutdown notice received. You may reconnect shortly.")
+            server_msg("[Server] Shutdown notice received. You may reconnect shortly.")
             self.session = None
             self.connected = False
         else:
-            safe_print("[Server] Unhandled message:", message)
+            server_msg(f"[Server] Unhandled message: {message}")
 
     #protocol functions
     async def connect(self):
-        print("[*] Sending CONNECT request...")
+        server_msg("[*] Sending CONNECT request...")
         request_handle = random.getrandbits(32)
         packet = {
             "request_type": 1,
@@ -78,17 +76,18 @@ class ChatClient:
             response = msgpack.unpackb(data)        
             await self.handle_message(response)
         except Exception as e:
-            print("[!] Failed to connect:", e)
+            server_msg(f"[!] Failed to connect: {e}")
 
     async def disconnect(self):
-        print("[*] Sending DISCONNECT request...")
-        request_handle = random.getrandbits(32)
-        packet = {
-            "request_type": 23,
-            "session":self.session,
-            "request_handle": request_handle
-        }
-        self.send(packet)
+        if self.connected:
+            server_msg("[*] Sending DISCONNECT request...")
+            request_handle = random.getrandbits(32)
+            packet = {
+                "request_type": 23,
+                "session":self.session,
+                "request_handle": request_handle
+            }
+            self.send(packet)
 
     async def ping(self):
         while self.connected:
@@ -100,3 +99,6 @@ class ChatClient:
             }
             self.send(packet)
             await asyncio.sleep(20)
+
+def server_msg(message):
+    mod_print(f"{GREY}{message}{RESET}")
