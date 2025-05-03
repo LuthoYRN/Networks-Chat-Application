@@ -77,6 +77,18 @@ class ChatClient:
             else:
                 desc = response.get("description")
                 server_msg(f"[Server] You joined | {channel}: {desc}")
+        elif response_type == 26:  # CHANNEL_LIST_response
+            channels = response.get("channels", [])
+            next_page = response.get("next_page", False)
+
+            if not channels:
+                error_msg("[!] No channels found.")
+            else:
+                for ch in channels:
+                    server_msg(f"[Server] • {ch}")
+                if next_page:
+                    progress_msg("[*] More channels available. Use: /channels <offset>")
+
     #protocol functions
     async def connect(self):
         progress_msg("[*] Sending CONNECT request...")
@@ -182,3 +194,14 @@ class ChatClient:
                     "channel": channel
                 }
                 self.send(packet)
+
+    async def list_channels(self, offset: int = 0):
+        if self.connected:
+           request_handle = random.getrandbits(32)
+           packet = {
+                "request_type": 5,  # CHANNEL_LIST
+                "session": self.session,
+                "request_handle": request_handle,
+                "offset": offset  # Optional
+           }
+           self.send(packet)

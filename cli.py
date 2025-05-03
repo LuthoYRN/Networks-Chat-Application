@@ -85,6 +85,12 @@ async def prompt_loop(client: ChatClient):
                                     error_msg("[!] Usage: /join <channel>")
                                 else:
                                     await client.join_channel(parts[1].strip())
+                            elif user_input.startswith("/channels"):
+                                parts = user_input.split(" ")
+                                offset = 0
+                                if len(parts) == 2 and parts[1].isdigit():
+                                    offset = int(parts[1])
+                                await client.list_channels(offset)
                         #user commands
                             else:
                                 error_msg("[!] Unknown command.")
