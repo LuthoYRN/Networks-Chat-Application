@@ -29,7 +29,7 @@ class ChatClient:
                 message = msgpack.unpackb(data)
                 await self.handle_message(message)
             except Exception as e:
-                server_msg(f"[!] Error receiving message: {e}")
+                error_msg(f"[!] Error receiving message: {e}")
     #server response handler
     async def handle_message(self, response: dict):
         response_type = response.get("response_type")
@@ -47,11 +47,11 @@ class ChatClient:
         elif response_type == 21:  # OK
             server_msg("[Server] OK")
         elif response_type == 20:  # ERROR
-            error_msg = response.get("error")
-            server_msg(f"[Server] {error_msg}")
+            error_mesg = response.get("error")
+            error_msg(f"[Server] {error_mesg}")
         elif response_type == 36:  # SERVER_MESSAGE
             text = response.get("message")
-            server_msg(f"[Broadcast] {text}")
+            server_msg(f"[Server] {text}")
         elif response_type == 37:  # SERVER_SHUTDOWN
             server_msg("[Server] Shutdown notice received. You may reconnect shortly.")
             self.session = None
@@ -69,6 +69,14 @@ class ChatClient:
             channel = response.get("channel")
             desc = response.get("description")
             server_msg(f"[Server] Channel created | {channel}: {desc}")
+        elif response_type == 28:  # CHANNEL_JOIN_response
+            username = response.get("username")
+            channel = response.get("channel")
+            if not response.get("response_handle"):
+                server_msg(f"[+] {username} joined {channel}")
+            else:
+                desc = response.get("description")
+                server_msg(f"[Server] You joined | {channel}: {desc}")
     #protocol functions
     async def connect(self):
         progress_msg("[*] Sending CONNECT request...")
@@ -158,5 +166,19 @@ class ChatClient:
                     "request_handle": request_handle,
                     "channel":name,
                     "description":description
+                }
+                self.send(packet)
+
+    async def join_channel(self, channel: str):
+        if self.connected:
+            if not channel or len(channel) > 20:
+                error_msg("[!] Invalid channel name.")
+            else:
+                request_handle = random.getrandbits(32)
+                packet = {
+                    "request_type": 7,  # CHANNEL_JOIN
+                    "session": self.session,
+                    "request_handle": request_handle,
+                    "channel": channel
                 }
                 self.send(packet)
