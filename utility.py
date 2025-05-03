@@ -36,5 +36,14 @@ CHAT_HEADER = f"{BOLD}{BRIGHT_CYAN}Welcome to CLI Chat — Stay connected, secur
 def mod_print(message):
     print_formatted_text(ANSI(message))
 
+def error_msg(message):
+    print_formatted_text(ANSI(f"{BRIGHT_RED}{message}{RESET}"))
+
+def server_msg(message):
+    print_formatted_text(ANSI(f"{GREY}{message}{RESET}"))
+
+def progress_msg(message):
+    print_formatted_text(ANSI(f"{BRIGHT_MAGENTA}{message}{RESET}"))
+
 def clear_terminal():
     os.system('cls' if os.name == 'nt' else 'clear') 

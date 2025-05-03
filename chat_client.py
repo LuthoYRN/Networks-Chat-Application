@@ -48,7 +48,7 @@ class ChatClient:
             server_msg("[Server] OK")
         elif response_type == 20:  # ERROR
             error_msg = response.get("error")
-            server_msg(f"[Server ERROR] {error_msg}")
+            server_msg(f"[Server] {error_msg}")
         elif response_type == 36:  # SERVER_MESSAGE
             text = response.get("message")
             server_msg(f"[Broadcast] {text}")
@@ -58,14 +58,20 @@ class ChatClient:
             self.connected = False
         elif response_type == 32:  # WHOAMI
             server_msg(f"[Server] You are {response.get('username')}.")
+        elif response_type == 31:  # WHOIS
+            server_msg(f"[Server] Information: username: {response.get('username')} , status: {response['status']}, transport: {response['transport']}.") 
         elif response_type == 34:  # SETUSERNAME
             old = response.get("old_username")
             new = response.get("new_username")
             self.username = new
             server_msg(f"[Server] Username changed: {old} → {new}")
+        elif response_type == 25:  # CHANNEL_CREATE_response
+            channel = response.get("channel")
+            desc = response.get("description")
+            server_msg(f"[Server] Channel created | {channel}: {desc}")
     #protocol functions
     async def connect(self):
-        server_msg("[*] Sending CONNECT request...")
+        progress_msg("[*] Sending CONNECT request...")
         request_handle = random.getrandbits(32)
         packet = {
             "request_type": 1,
@@ -77,11 +83,11 @@ class ChatClient:
             response = msgpack.unpackb(data)        
             await self.handle_message(response)
         except Exception as e:
-            server_msg(f"[!] Failed to connect: {e}")
+            error_msg(f"[!] Failed to connect: {e}")
 
     async def disconnect(self):
         if self.connected:
-            server_msg("[*] Sending DISCONNECT request...")
+            progress_msg("[*] Sending DISCONNECT request...")
             request_handle = random.getrandbits(32)
             packet = {
                 "request_type": 23,
@@ -110,17 +116,47 @@ class ChatClient:
                 "request_handle": request_handle
             }
             self.send(packet)
-            
-    async def set_username(self,username):
+    
+    async def whois(self,username):
         if self.connected:
             request_handle = random.getrandbits(32)
             packet = {
-                "request_type": 13,
+                "request_type": 10,
                 "session": self.session,
                 "request_handle": request_handle,
                 "username":username
             }
             self.send(packet)
+    
+    async def set_username(self,username):
+        if self.connected:
+            if not username.startswith("clear-"):
+                error_msg("[!] Invalid username. It must start with 'clear-'.")
+            elif ":" in username:
+                error_msg("[!] Invalid username. It must not contain ':'.")
+            else:
+                request_handle = random.getrandbits(32)
+                packet = {
+                    "request_type": 13,
+                    "session": self.session,
+                    "request_handle": request_handle,
+                    "username":username
+                }
+                self.send(packet)
 
-def server_msg(message):
-    mod_print(f"{GREY}{message}{RESET}")
+    async def create_channel(self,name:str,description:str):
+        if self.connected:
+            if not name or len(name) > 20:
+                error_msg("[!] Channel name must be 1–20 characters.")
+            elif len(description) > 100:
+                error_msg("[!] Description too long (max 100 characters).")
+            else:
+                request_handle = random.getrandbits(32)
+                packet = {
+                    "request_type": 4,
+                    "session": self.session,
+                    "request_handle": request_handle,
+                    "channel":name,
+                    "description":description
+                }
+                self.send(packet)

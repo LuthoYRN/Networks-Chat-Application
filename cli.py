@@ -66,19 +66,22 @@ async def prompt_loop(client: ChatClient):
                             elif user_input.startswith("/setname ") and len(user_input.split(" "))==2:
                                 parts = user_input.split(" ", 1)
                                 if len(parts) < 2 or not parts[1].strip():
-                                    mod_print(f"{BRIGHT_RED}[!] Usage: /setname <new_username>{RESET}")
+                                    error_msg("[!] Usage: /setname <new_username>")
                                 else:
                                     new_name = parts[1]
-                                    if not new_name.startswith("clear-"):
-                                        mod_print(f"{BRIGHT_RED}[!] Invalid username. It must start with 'clear-'.{RESET}")
-                                    elif ":" in new_name:
-                                        mod_print(f"{BRIGHT_RED}[!] Invalid username. It must not contain ':'.{RESET}")
-                                    else:
-                                        await client.set_username(new_name)
+                                    await client.set_username(new_name)
                         #channel commands
+                            elif user_input.startswith("/create "):
+                                parts = user_input.split(" ", 2)
+                                if len(parts) < 3:
+                                    error_msg("[!] Usage: /create <channel_name> <description>")
+                                else:
+                                    channel_name = parts[1].strip()
+                                    description = parts[2].strip()
+                                    await client.create_channel(channel_name, description)
                         #user commands
                             else:
-                                mod_print(f"{BRIGHT_RED}[!] Unknown command.{RESET}")
+                                error_msg("[!] Unknown command.")
                         else:
                     #OFFLINE
                         #session management
@@ -92,7 +95,7 @@ async def prompt_loop(client: ChatClient):
                                 mod_print(RESET)
                                 break
                             else:
-                                mod_print(f"{BRIGHT_RED}[!] Unknown command.{RESET}")
+                                error_msg("[!] Unknown command.")
                 except KeyboardInterrupt:
                     # Handle Ctrl+C
                     break
