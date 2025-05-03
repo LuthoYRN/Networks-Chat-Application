@@ -64,11 +64,11 @@ class ChatClient:
             old = response.get("old_username")
             new = response.get("new_username")
             self.username = new
-            server_msg(f"[Server] Username changed: {old} → {new}")
+            server_msg(f"[Server] Username changed: {old} {BRIGHT_MAGENTA}→{GREY} {new}")
         elif response_type == 25:  # CHANNEL_CREATE_response
             channel = response.get("channel")
             desc = response.get("description")
-            server_msg(f"[Server] Channel created | {channel}: {desc}")
+            server_msg(f"[Server] Channel created {BRIGHT_MAGENTA}|{GREY} {channel}: {desc}")
         elif response_type == 28:  # CHANNEL_JOIN_response
             username = response.get("username")
             channel = response.get("channel")
@@ -76,7 +76,7 @@ class ChatClient:
                 server_msg(f"[Server] {username} joined {channel}")
             else:
                 desc = response.get("description")
-                server_msg(f"[Server] You joined | {channel}: {desc}")
+                server_msg(f"[Server] You joined {BRIGHT_MAGENTA}|{GREY} {channel}: {desc}")
         elif response_type == 26:  # CHANNEL_LIST_response
             channels = response.get("channels", [])
             next_page = response.get("next_page", False)
@@ -84,8 +84,9 @@ class ChatClient:
             if not channels:
                 error_msg("[!] No channels found.")
             else:
+                server_msg(f"[Server] Channel List ({len(channels)})")
                 for ch in channels:
-                    server_msg(f"[Server] • {ch}")
+                    server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY} {ch}")
                 if next_page:
                     progress_msg("[*] More channels available. Use: /channels <offset>")
         elif response_type == 29:  # CHANNEL_LEFT_response
@@ -100,11 +101,26 @@ class ChatClient:
             description = response.get("description", "")
             members = response.get("members", [])
 
-            server_msg(f"[Server] - Channel Name : {channel}")
-            server_msg(f"[Server] - Description  : {description}")
-            server_msg(f"[Server] - Members ({len(members)})  :")
+            server_msg(f"[Server] Channel Name")
+            server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY}{channel}")
+            server_msg(f"[Server] Description")
+            server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY}{description}")
+            server_msg(f"[Server] Members ({len(members)})")
             for user in members:
-                server_msg(f"[Server]     • {user}")
+                server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY}{user}")
+        elif response_type == 35:  # USER_LIST_response
+            users = response.get("users", [])
+            next_page = response.get("next_page", False)
+
+            if not users:
+                error_msg("[!] No users found.")
+            else:
+                server_msg(f"[Server] User List ({len(users)})")
+                for u in users:
+                    server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY} {u}")
+
+                if next_page:
+                    progress_msg("[*] More users exist. Try: /users <offset>")
 
     #protocol functions
     async def connect(self):
@@ -250,3 +266,20 @@ class ChatClient:
                     "channel": channel
                 }
                 self.send(packet)
+
+    async def list_users(self, channel: str = "", offset: int = 0):
+        if self.connected:
+            request_handle = random.getrandbits(32)
+            packet = {
+                "request_type": 14,  
+                "session": self.session,
+                "request_handle": request_handle,
+                "offset": offset
+            }
+            if channel:
+                if len(channel) > 20:
+                    error_msg("[!] Invalid channel name.")
+                else:
+                    packet["channel"] = channel
+
+            self.send(packet)
