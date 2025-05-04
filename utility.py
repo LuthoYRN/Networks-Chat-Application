@@ -11,7 +11,6 @@ def typewriter_effect(text: str, delay: float = 0.02):
         time.sleep(delay)
     print()  # move to the next line
 
-#cli color codes
 BOLD = "\033[1m"
 BRIGHT_BLUE = "\033[94m"
 BRIGHT_YELLOW = "\033[93m"
@@ -27,12 +26,13 @@ YELLOW = "\033[33m"
 BLUE = "\033[34m"
 MAGENTA = "\033[35m"
 CYAN = "\033[36m"
+UNDERLINE = "\033[4m"
 GREY = "\033[90m"
 WHITE="\033[37m"   
 RESET = "\033[0m"
 
 CHAT_HEADER = f"{BOLD}{BRIGHT_CYAN}Welcome to CLI Chat — Stay connected, securely.{RESET}"
-
+LISTENING_DIVIDER = f"{BOLD}{BRIGHT_CYAN}Listening for messages ...{RESET}"
 def mod_print(message):
     print_formatted_text(ANSI(message))
 

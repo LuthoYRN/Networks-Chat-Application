@@ -40,7 +40,9 @@ def print_menu(connected):
         mod_print(f"  /quit                        {BRIGHT_YELLOW} - exit{RESET}")
     mod_print("\n[Other]")
     mod_print(f"  /clear                       {BRIGHT_YELLOW} - clear interface{RESET}\n")
-
+    if connected:
+        typewriter_effect("Listening for messages ...")
+        mod_print(" ")
 async def prompt_loop(client: ChatClient):
     session = PromptSession()
     typewriter_effect(CHAT_HEADER, delay=0.05)
@@ -117,6 +119,20 @@ async def prompt_loop(client: ChatClient):
                                     await client.list_users(channel=parts[1], offset=int(parts[2]))
                                 else:
                                     error_msg("[!] Usage: /users [channel] [offset]")
+                            elif user_input.startswith("/whois "):
+                                parts = user_input.split(" ", 1)
+                                if len(parts) < 2 or not parts[1].strip():
+                                    error_msg("[!] Usage: /whois <username>")
+                                else:
+                                    await client.whois(parts[1].strip())
+                            elif user_input.startswith("/dm"):
+                                parts = user_input.split(" ", 2)
+                                if len(parts) != 3:
+                                    error_msg("[!] Usage: /dm <username> <message>")
+                                else:
+                                    to_user = parts[1].strip()
+                                    message = parts[2].strip()
+                                    await client.send_dm(to_user, message)
                             else:
                                 error_msg("[!] Unknown command.")
                         else:

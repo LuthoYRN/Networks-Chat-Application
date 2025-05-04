@@ -42,11 +42,11 @@ class ChatClient:
             self.session = None
             self.connected = False
             server_msg(f"[Server] {response['message']}")  
-        elif response_type == 24:  # PING response
+        elif response_type == 24:  # PING_response
             server_msg("[Server] Pong received.")
-        elif response_type == 21:  # OK
+        elif response_type == 21:  # OK_response
             server_msg("[Server] OK")
-        elif response_type == 20:  # ERROR
+        elif response_type == 20:  # ERROR_response
             error_mesg = response.get("error")
             error_msg(f"[Server] {error_mesg}")
         elif response_type == 36:  # SERVER_MESSAGE
@@ -58,8 +58,29 @@ class ChatClient:
             self.connected = False
         elif response_type == 32:  # WHOAMI
             server_msg(f"[Server] You are {response.get('username')}.")
-        elif response_type == 31:  # WHOIS
-            server_msg(f"[Server] Information: username: {response.get('username')} , status: {response['status']}, transport: {response['transport']}.") 
+        elif response_type == 31:  # WHOIS_response
+            username = response.get("username")
+            status = response.get("status", "unknown")
+            transport = response.get("transport", "unknown")
+            channels = response.get("channels", [])
+            pubkey = response.get("wireguard_public_key", "")
+
+            server_msg(f"[Server] Username")
+            server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY} {username}")
+            server_msg(f"[Server] Status")
+            if status == "active":
+                server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {BRIGHT_GREEN} {status}")
+            else:
+                server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {BRIGHT_RED} {status}")
+            server_msg(f"[Server] Transport")
+            server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY} {transport}")
+            if channels:
+                server_msg(f"[Server] Channels")
+                for ch in channels:
+                        server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY} {ch}")
+            if transport == "wireguard":
+                server_msg(f"[Server] Public Key")
+                server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY} {pubkey}")
         elif response_type == 34:  # SETUSERNAME
             old = response.get("old_username")
             new = response.get("new_username")
@@ -121,7 +142,10 @@ class ChatClient:
 
                 if next_page:
                     progress_msg("[*] More users exist. Try: /users <offset>")
-
+        elif response_type == 33:  # USER_MESSAGE_response
+            sender = response.get("from_username", "unknown")
+            text = response.get("message", "")
+            mod_print(f"[{YELLOW}Direct Message{GREY}] {sender} {BRIGHT_RED}➜ {BRIGHT_YELLOW} {text}")
     #protocol functions
     async def connect(self):
         progress_msg("[*] Sending CONNECT request...")
@@ -169,18 +193,21 @@ class ChatClient:
                 "request_handle": request_handle
             }
             self.send(packet)
-    
-    async def whois(self,username):
+
+    async def whois(self, username: str):
         if self.connected:
-            request_handle = random.getrandbits(32)
-            packet = {
-                "request_type": 10,
-                "session": self.session,
-                "request_handle": request_handle,
-                "username":username
-            }
-            self.send(packet)
-    
+            if not username or len(username) > 20:
+                error_msg("[!] Invalid username.")
+            else:
+                request_handle = random.getrandbits(32)
+                packet = {
+                    "request_type": 10, 
+                    "session": self.session,
+                    "request_handle": request_handle,
+                    "username": username
+                }
+                self.send(packet)
+
     async def set_username(self,username):
         if self.connected:
             if not username.startswith("clear-"):
@@ -282,4 +309,23 @@ class ChatClient:
                 else:
                     packet["channel"] = channel
 
+            self.send(packet)
+
+    async def send_dm(self, to_username: str, message: str):
+        if self.connected:
+            if len(to_username) > 20:
+                error_msg("[!] Username must be 20 characters or fewer.")
+                return
+            if len(message) > 500:
+                error_msg("[!] Message must be 500 characters or fewer.")
+                return
+
+            request_handle = random.getrandbits(32)
+            packet = {
+                "request_type": 12,
+                "session": self.session,
+                "request_handle": request_handle,
+                "to_username": to_username,
+                "message": message
+            }
             self.send(packet)
