@@ -145,7 +145,12 @@ class ChatClient:
         elif response_type == 33:  # USER_MESSAGE_response
             sender = response.get("from_username", "unknown")
             text = response.get("message", "")
-            mod_print(f"[{YELLOW}Direct Message{GREY}] {sender} {BRIGHT_RED}➜ {BRIGHT_YELLOW} {text}")
+            mod_print(f"[{CYAN}Direct Message{GREY}] {sender} {BRIGHT_RED}➜ {BRIGHT_YELLOW} {text}")
+        elif response_type == 30:  # CHANNEL_MESSAGE_response
+                sender = response.get("username", "unknown")
+                channel = response.get("channel", "?")
+                text = response.get("message", "")
+                mod_print(f"[{WHITE}Channel | {channel}{GREY}] {sender} {BRIGHT_RED}➜ {BRIGHT_YELLOW} {text}")
     #protocol functions
     async def connect(self):
         progress_msg("[*] Sending CONNECT request...")
@@ -326,6 +331,25 @@ class ChatClient:
                 "session": self.session,
                 "request_handle": request_handle,
                 "to_username": to_username,
+                "message": message
+            }
+            self.send(packet)
+
+    async def send_channel_msg(self, channel: str, message: str):
+        if self.connected:
+            if len(channel) > 20:
+                error_msg("[!] Channel name must be 20 characters or fewer.")
+                return
+            if len(message) > 500:
+                error_msg("[!] Message must be 500 characters or fewer.")
+                return
+
+            request_handle = random.getrandbits(32)
+            packet = {
+                "request_type": 9,
+                "session": self.session,
+                "request_handle": request_handle,
+                "channel": channel,
                 "message": message
             }
             self.send(packet)

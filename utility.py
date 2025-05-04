@@ -31,8 +31,8 @@ GREY = "\033[90m"
 WHITE="\033[37m"   
 RESET = "\033[0m"
 
-CHAT_HEADER = f"{BOLD}{BRIGHT_CYAN}Welcome to CLI Chat — Stay connected, securely.{RESET}"
-LISTENING_DIVIDER = f"{BOLD}{BRIGHT_CYAN}Listening for messages ...{RESET}"
+CHAT_HEADER = f"{BRIGHT_CYAN}Welcome to CLI Chat — Stay connected, securely.{RESET}"
+
 def mod_print(message):
     print_formatted_text(ANSI(message))
 
@@ -43,7 +43,7 @@ def server_msg(message):
     print_formatted_text(ANSI(f"{GREY}{message}{RESET}"))
 
 def progress_msg(message):
-    print_formatted_text(ANSI(f"{BRIGHT_MAGENTA}{message}{RESET}"))
+    print_formatted_text(ANSI(f"{BRIGHT_YELLOW}{message}{RESET}"))
 
 def clear_terminal():
     os.system('cls' if os.name == 'nt' else 'clear') 

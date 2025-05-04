@@ -13,9 +13,9 @@ custom_style = Style.from_dict({
 def print_menu(connected):
     status = ""
     if connected:
-        status = f"{BRIGHT_GREEN}ONLINE{RESET}"
+        status = f"{BRIGHT_GREEN}•{RESET}"
     else:
-        status =  f"{BRIGHT_RED}OFFLINE{RESET}"
+        status =  f"{BRIGHT_RED}•{RESET}"
 
     mod_print(f"{RESET}\nAvailable commands: {status}")
     mod_print("\n[Session Management]")   
@@ -105,6 +105,14 @@ async def prompt_loop(client: ChatClient):
                                     error_msg("[!] Usage: /info <channel>")
                                 else:
                                     await client.channel_info(parts[1].strip())
+                            elif user_input.startswith("/msg"):
+                                parts = user_input.split(" ", 2)
+                                if len(parts) != 3:
+                                    error_msg("[!] Usage: /msg <channel> <message>")
+                                else:
+                                    channel = parts[1].strip()
+                                    message = parts[2].strip()
+                                    await client.send_channel_msg(channel, message)
                         #user commands
                             elif user_input.startswith("/users"):
                                 parts = user_input.split(" ")
