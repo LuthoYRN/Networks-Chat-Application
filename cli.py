@@ -13,9 +13,9 @@ custom_style = Style.from_dict({
 def print_menu(connected):
     status = ""
     if connected:
-        status = f"{BRIGHT_GREEN}ONLINE{RESET}"
+        status = f"{BRIGHT_GREEN}•{RESET}"
     else:
-        status =  f"{BRIGHT_RED}OFFLINE{RESET}"
+        status =  f"{BRIGHT_RED}•{RESET}"
 
     mod_print(f"{RESET}\nAvailable commands: {status}")
     mod_print("\n[Session Management]")   
@@ -40,7 +40,9 @@ def print_menu(connected):
         mod_print(f"  /quit                        {BRIGHT_YELLOW} - exit{RESET}")
     mod_print("\n[Other]")
     mod_print(f"  /clear                       {BRIGHT_YELLOW} - clear interface{RESET}\n")
-
+    if connected:
+        typewriter_effect("Listening for messages ...")
+        mod_print(" ")
 async def prompt_loop(client: ChatClient):
     session = PromptSession()
     typewriter_effect(CHAT_HEADER, delay=0.05)
@@ -85,7 +87,60 @@ async def prompt_loop(client: ChatClient):
                                     error_msg("[!] Usage: /join <channel>")
                                 else:
                                     await client.join_channel(parts[1].strip())
+                            elif user_input.startswith("/channels"):
+                                parts = user_input.split(" ",1)
+                                offset = 0
+                                if len(parts) == 2 and parts[1].isdigit():
+                                    offset = int(parts[1])
+                                await client.list_channels(offset)
+                            elif user_input.startswith("/leave "):
+                                parts = user_input.split(" ", 1)
+                                if len(parts) < 2 or not parts[1].strip():
+                                    error_msg("[!] Usage: /leave <channel>")
+                                else:
+                                    await client.leave_channel(parts[1].strip())
+                            elif user_input.startswith("/info "):
+                                parts = user_input.split(" ", 1)
+                                if len(parts) < 2 or not parts[1].strip():
+                                    error_msg("[!] Usage: /info <channel>")
+                                else:
+                                    await client.channel_info(parts[1].strip())
+                            elif user_input.startswith("/msg"):
+                                parts = user_input.split(" ", 2)
+                                if len(parts) != 3:
+                                    error_msg("[!] Usage: /msg <channel> <message>")
+                                else:
+                                    channel = parts[1].strip()
+                                    message = parts[2].strip()
+                                    await client.send_channel_msg(channel, message)
                         #user commands
+                            elif user_input.startswith("/users"):
+                                parts = user_input.split(" ")
+                                if len(parts) == 1:
+                                    await client.list_users()
+                                elif len(parts) == 2:
+                                    if parts[1].isdigit():
+                                        await client.list_users(offset=int(parts[1]))
+                                    else:
+                                        await client.list_users(channel=parts[1])
+                                elif len(parts) == 3 and parts[2].isdigit():
+                                    await client.list_users(channel=parts[1], offset=int(parts[2]))
+                                else:
+                                    error_msg("[!] Usage: /users [channel] [offset]")
+                            elif user_input.startswith("/whois "):
+                                parts = user_input.split(" ", 1)
+                                if len(parts) < 2 or not parts[1].strip():
+                                    error_msg("[!] Usage: /whois <username>")
+                                else:
+                                    await client.whois(parts[1].strip())
+                            elif user_input.startswith("/dm"):
+                                parts = user_input.split(" ", 2)
+                                if len(parts) != 3:
+                                    error_msg("[!] Usage: /dm <username> <message>")
+                                else:
+                                    to_user = parts[1].strip()
+                                    message = parts[2].strip()
+                                    await client.send_dm(to_user, message)
                             else:
                                 error_msg("[!] Unknown command.")
                         else:
