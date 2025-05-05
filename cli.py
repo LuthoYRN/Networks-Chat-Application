@@ -5,6 +5,7 @@ from prompt_toolkit.styles import Style
 from chat_client import ChatClient
 from utility import *
 from shutil import get_terminal_size
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
 custom_style = Style.from_dict({
     "prompt": "ansiyellow",
@@ -54,7 +55,7 @@ async def prompt_loop(client: ChatClient):
     with patch_stdout():
             while True:
                 try:
-                    user_input = await session.prompt_async("> ",style=custom_style)
+                    user_input = await session.prompt_async("> ",style=custom_style,auto_suggest=AutoSuggestFromHistory())
                     user_input = user_input.strip()
                     #Other
                     if user_input == "/clear":
