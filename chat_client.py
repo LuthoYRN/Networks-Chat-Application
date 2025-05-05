@@ -145,9 +145,13 @@ class ChatClient:
         elif response_type == 33:  # USER_MESSAGE_response
             sender = response.get("from_username", "unknown")
             text = response.get("message", "")
+            if sender == self.username:
+                sender = "You"
             mod_print(f"{GREY}[{current_time()}] [{CYAN}Direct Message{GREY}] {sender} {BRIGHT_RED}➜ {BRIGHT_YELLOW} {text}")
         elif response_type == 30:  # CHANNEL_MESSAGE_response
                 sender = response.get("username", "unknown")
+                if sender == self.username:
+                    sender = "You"
                 channel = response.get("channel", "?")
                 text = response.get("message", "")
                 mod_print(f"{GREY}[{current_time()}] [{WHITE}Channel | {channel}{GREY}] {sender} {BRIGHT_RED}➜ {BRIGHT_YELLOW} {text}")
