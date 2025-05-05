@@ -215,12 +215,12 @@ class ChatClient:
 
     async def set_username(self,username):
         if self.connected:
-            if not username.startswith("clear-"):
-                error_msg("[!] Invalid username. It must start with 'clear-'.")
-            elif ":" in username:
+            if ":" in username:
                 error_msg("[!] Invalid username. It must not contain ':'.")
             else:
                 request_handle = random.getrandbits(32)
+                if  SERVER_PORT== 51825: #clear-text port
+                    username = f"clear-{username}"
                 packet = {
                     "request_type": 13,
                     "session": self.session,
