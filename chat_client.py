@@ -38,7 +38,7 @@ class ChatClient:
             self.username = response["username"]
             self.connected = True
             server_msg(f"[Server] {response['message']}")  
-        elif response_type == 22 and not response.get("username"):  # DISCONNECT_response
+        elif response_type == 23 and not response.get("username"):  # DISCONNECT_response
             self.session = None
             self.connected = False
             server_msg(f"[Server] {response['message']}")  
@@ -172,7 +172,7 @@ class ChatClient:
             progress_msg("[*] Sending DISCONNECT request...")
             request_handle = random.getrandbits(32)
             packet = {
-                "request_type": 23,
+                "request_type": 2,
                 "session":self.session,
                 "request_handle": request_handle
             }

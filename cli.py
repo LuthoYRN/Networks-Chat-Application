@@ -63,7 +63,8 @@ async def prompt_loop(client: ChatClient):
                             if user_input == "/whoami":
                                 await client.whoami()
                             elif user_input == "/quit":
-                                mod_print(RESET)
+                                await client.disconnect()
+                                await asyncio.sleep(1)
                                 break
                             elif user_input.startswith("/setname ") and len(user_input.split(" "))==2:
                                 parts = user_input.split(" ", 1)
