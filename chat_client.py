@@ -13,6 +13,10 @@ class ChatClient:
         self.username = None #server assigned username
         self.connected = False
         self.byte_limit = 1460
+        self.dm_count = 0
+        self.joined_channels = set()
+        self.user_count = 0  
+        self.silent_update = False #to update user count 
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setblocking(False)
@@ -89,6 +93,7 @@ class ChatClient:
         elif response_type == 25:  # CHANNEL_CREATE_response
             channel = response.get("channel")
             desc = response.get("description")
+            self.joined_channels.add(response.get("channel"))
             server_msg(f"[Server] Channel created {BRIGHT_MAGENTA}|{GREY} {channel}: {desc}")
         elif response_type == 28:  # CHANNEL_JOIN_response
             username = response.get("username")
@@ -98,6 +103,7 @@ class ChatClient:
             else:
                 desc = response.get("description")
                 server_msg(f"[Server] You joined {BRIGHT_MAGENTA}|{GREY} {channel}: {desc}")
+                self.joined_channels.add(response.get("channel"))
         elif response_type == 26:  # CHANNEL_LIST_response
             channels = response.get("channels", [])
             next_page = response.get("next_page", False)
@@ -117,6 +123,7 @@ class ChatClient:
                 server_msg(f"[Server] {username} left {channel}")
             else:
                 server_msg(f"[Server] You left {channel}")
+                self.joined_channels.discard(response.get("channel"))
         elif response_type == 27:  # CHANNEL_INFO_response
             channel = response.get("channel")
             description = response.get("description", "")
@@ -131,18 +138,22 @@ class ChatClient:
                 server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY}{user}")
         elif response_type == 35:  # USER_LIST_response
             users = response.get("users", [])
+            self.user_count = len(response.get("users", []))
             next_page = response.get("next_page", False)
 
-            if not users:
-                error_msg("[!] No users found.")
-            else:
-                server_msg(f"[Server] User List ({len(users)})")
-                for u in users:
-                    server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY} {u}")
+            if not self.silent_update:
+                if not users:
+                    error_msg("[!] No users found.")
+                else:
+                    server_msg(f"[Server] User List ({len(users)})")
+                    for u in users:
+                        server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY} {u}")
 
-                if next_page:
-                    progress_msg("[*] More users exist. Try: /users <offset>")
+                    if next_page:
+                        progress_msg("[*] More users exist. Try: /users <offset>")
+            self.silent_update = False
         elif response_type == 33:  # USER_MESSAGE_response
+            self.dm_count += 1
             sender = response.get("from_username", "unknown")
             text = response.get("message", "")
             if sender == self.username:

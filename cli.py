@@ -4,10 +4,13 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.styles import Style
 from chat_client import ChatClient
 from utility import *
+from shutil import get_terminal_size
 
 custom_style = Style.from_dict({
     "prompt": "ansiyellow",
-    "": "ansiyellow",  # Apply yellow to user input text
+    "": "ansiyellow",  # Apply yellow to user input text,
+    "bottom-toolbar": "bg:#000000 fg:#aaaaaa",  
+    "bottom-toolbar.text": "bg:#000000 fg:#aaaaaa",
 })   
 
 def print_menu(connected):
@@ -43,8 +46,9 @@ def print_menu(connected):
     if connected:
         typewriter_effect("Listening for messages ...")
         mod_print(" ")
+
 async def prompt_loop(client: ChatClient):
-    session = PromptSession()
+    session = PromptSession(bottom_toolbar=bottom_toolbar)
     typewriter_effect(CHAT_HEADER, delay=0.05)
     print_menu(client.connected)  # Show options on startup
     with patch_stdout():
@@ -152,6 +156,7 @@ async def prompt_loop(client: ChatClient):
                                 if client.connected:
                                     asyncio.create_task(client.receive_loop())
                                     asyncio.create_task(client.ping())
+                                    asyncio.create_task(periodic_user_refresh(client))
                                     print_menu(client.connected)
                             elif user_input == "/quit":
                                 mod_print(RESET)
@@ -165,7 +170,33 @@ async def prompt_loop(client: ChatClient):
                     # Handle Ctrl+D
                     break
 
+async def periodic_user_refresh(client):
+    while client.connected:
+        client.silent_update = True
+        await client.list_users()
+        await asyncio.sleep(60)
+
+def bottom_toolbar():
+    content = ""
+    time_now = datetime.now().strftime("%H:%M")
+    if client.connected:
+        content = (f"📡 connected | "
+                f"{len(client.joined_channels)} channels | "
+                f"💬 {client.dm_count} DMs | "
+                f"🧑‍🤝‍🧑 {client.user_count} users | "
+                f"🕒 {time_now}")
+    else:
+        content = (f"📡 disconnected | "
+                f"🕒 {time_now}")
+
+    terminal_width = get_terminal_size().columns
+    padded = content.ljust(terminal_width)
+    return ANSI(
+        f"{padded}"
+    )
+
 async def main():
+    global client 
     client = ChatClient()
     await prompt_loop(client) #cli options
 
