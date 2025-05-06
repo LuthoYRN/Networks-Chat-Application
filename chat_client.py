@@ -17,6 +17,7 @@ class ChatClient:
         self.joined_channels = set()
         self.user_count = 0  
         self.silent_update = False #to update user count 
+        self.minimal_mode = False #suppress server messages
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setblocking(False)
@@ -41,21 +42,21 @@ class ChatClient:
             self.session = response["session"]
             self.username = response["username"]
             self.connected = True
-            server_msg(f"[Server] {response['message']}")  
+            server_msg(f"[Server] {response['message']}",self.minimal_mode)  
         elif response_type == 23 and not response.get("username"):  # DISCONNECT_response
             self.session = None
             self.connected = False
-            server_msg(f"[Server] {response['message']}")  
+            server_msg(f"[Server] {response['message']}",self.minimal_mode)  
         elif response_type == 24:  # PING_response
-            server_msg("[Server] Pong received.")
+            server_msg("[Server] Pong received.",self.minimal_mode)
         elif response_type == 21:  # OK_response
-            server_msg("[Server] OK")
+            server_msg("[Server] OK",self.minimal_mode)
         elif response_type == 20:  # ERROR_response
             error_mesg = response.get("error")
             error_msg(f"[Server] {error_mesg}")
         elif response_type == 36:  # SERVER_MESSAGE
             text = response.get("message")
-            server_msg(f"[Server] {text}")
+            server_msg(f"[Server] {text}",self.minimal_mode)
         elif response_type == 37:  # SERVER_SHUTDOWN
             server_msg("[Server] Shutdown notice received. You may reconnect shortly.")
             self.session = None
@@ -168,7 +169,7 @@ class ChatClient:
                 mod_print(f"{GREY}[{current_time()}] [{WHITE}Channel | {channel}{GREY}] {sender} {BRIGHT_RED}➜ {BRIGHT_YELLOW} {text}")
     #protocol functions
     async def connect(self):
-        progress_msg("[*] Sending CONNECT request...")
+        progress_msg("[*] Sending CONNECT request...",self.minimal_mode)
         request_handle = random.getrandbits(32)
         packet = {
             "request_type": 1,
@@ -184,7 +185,7 @@ class ChatClient:
 
     async def disconnect(self):
         if self.connected:
-            progress_msg("[*] Sending DISCONNECT request...")
+            progress_msg("[*] Sending DISCONNECT request...",self.minimal_mode)
             request_handle = random.getrandbits(32)
             packet = {
                 "request_type": 2,

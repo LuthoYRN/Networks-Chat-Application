@@ -40,11 +40,13 @@ def mod_print(message):
 def error_msg(message):
     print_formatted_text(ANSI(f"{BRIGHT_RED}{message}{RESET}"))
 
-def server_msg(message):
-    print_formatted_text(ANSI(f"{GREY}[{current_time()}] {message}{RESET}"))
+def server_msg(message,suppress = False):
+    if not suppress:
+        print_formatted_text(ANSI(f"{GREY}[{current_time()}] {message}{RESET}"))
 
-def progress_msg(message):
-    print_formatted_text(ANSI(f"{BRIGHT_YELLOW}{message}{RESET}"))
+def progress_msg(message,suppress = False):
+    if not suppress:
+        print_formatted_text(ANSI(f"{BRIGHT_YELLOW}{message}{RESET}"))
 
 def clear_terminal():
     os.system('cls' if os.name == 'nt' else 'clear') 
