@@ -43,7 +43,7 @@ def print_menu(connected):
         mod_print(f"  /connect                     {BRIGHT_YELLOW} - Connect to the chat server{RESET}")
         mod_print(f"  /quit                        {BRIGHT_YELLOW} - exit{RESET}")
     mod_print("\n[Other]")
-    mod_print(f"  /minimal <ON/OFF>            {BRIGHT_YELLOW} - toggle server messages{RESET}")
+    mod_print(f"  /minimal <ON/OFF>            {BRIGHT_YELLOW} - Suppress non-essential server messages{RESET}")
     mod_print(f"  /clear                       {BRIGHT_YELLOW} - clear interface{RESET}\n")
     if connected:
         typewriter_effect("Listening for messages ...")
