@@ -194,7 +194,7 @@ def bottom_toolbar():
     time_now = datetime.now().strftime("%H:%M")
     if client.connected:
         content = (f"📡 connected | "
-                f"{'🧘 Minimal | ' if client.minimal_mode else ''}"
+                f"{'🔇 Minimal | ' if client.minimal_mode else ''}"
                 f"{len(client.joined_channels)} channels | "
                 f"💬 {client.dm_count} DMs | "
                 f"🧑‍🤝‍🧑 {client.user_count} users | "
