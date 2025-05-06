@@ -4,10 +4,14 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.styles import Style
 from chat_client import ChatClient
 from utility import *
+from shutil import get_terminal_size
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
 custom_style = Style.from_dict({
     "prompt": "ansiyellow",
-    "": "ansiyellow",  # Apply yellow to user input text
+    "": "ansiyellow",  # Apply yellow to user input text,
+    "bottom-toolbar": "bg:#000000 fg:#aaaaaa",  
+    "bottom-toolbar.text": "bg:#000000 fg:#aaaaaa",
 })   
 
 def print_menu(connected):
@@ -39,23 +43,36 @@ def print_menu(connected):
         mod_print(f"  /connect                     {BRIGHT_YELLOW} - Connect to the chat server{RESET}")
         mod_print(f"  /quit                        {BRIGHT_YELLOW} - exit{RESET}")
     mod_print("\n[Other]")
+    mod_print(f"  /minimal <ON/OFF>            {BRIGHT_YELLOW} - Suppress non-essential server messages{RESET}")
     mod_print(f"  /clear                       {BRIGHT_YELLOW} - clear interface{RESET}\n")
     if connected:
         typewriter_effect("Listening for messages ...")
         mod_print(" ")
+
 async def prompt_loop(client: ChatClient):
-    session = PromptSession()
+    session = PromptSession(bottom_toolbar=bottom_toolbar)
     typewriter_effect(CHAT_HEADER, delay=0.05)
     print_menu(client.connected)  # Show options on startup
     with patch_stdout():
             while True:
                 try:
-                    user_input = await session.prompt_async("> ",style=custom_style)
+                    user_input = await session.prompt_async("> ",style=custom_style,auto_suggest=AutoSuggestFromHistory())
                     user_input = user_input.strip()
                     #Other
                     if user_input == "/clear":
                             clear_terminal()
                             print_menu(client.connected)
+                    elif user_input.startswith("/minimal"):
+                        parts = user_input.split()
+                        if len(parts) == 2 and parts[1].lower() in ("on", "off"):
+                            new_state = parts[1].lower() == "on"
+                            if client.minimal_mode == new_state:
+                                progress_msg(f"[=] Minimal mode already {'enabled' if new_state else 'disabled'}.")
+                            else:
+                                client.minimal_mode = new_state
+                                progress_msg(f"[+] Minimal mode {'enabled' if new_state else 'disabled'}.")
+                        else:
+                            error_msg("[!] Usage: /minimal <ON/OFF>")
                     else: 
                     #ONLINE
                         if client.connected:
@@ -152,6 +169,7 @@ async def prompt_loop(client: ChatClient):
                                 if client.connected:
                                     asyncio.create_task(client.receive_loop())
                                     asyncio.create_task(client.ping())
+                                    asyncio.create_task(periodic_user_refresh(client))
                                     print_menu(client.connected)
                             elif user_input == "/quit":
                                 mod_print(RESET)
@@ -165,7 +183,35 @@ async def prompt_loop(client: ChatClient):
                     # Handle Ctrl+D
                     break
 
+async def periodic_user_refresh(client):
+    while client.connected:
+        client.silent_update = True
+        await client.list_users()
+        await asyncio.sleep(60)
+
+def bottom_toolbar():
+    content = ""
+    time_now = datetime.now().strftime("%H:%M")
+    if client.connected:
+        content = (f"📡 connected | "
+                f"{'🔇 Minimal | ' if client.minimal_mode else ''}"
+                f"{len(client.joined_channels)} channels | "
+                f"💬 {client.dm_count} DMs | "
+                f"🧑‍🤝‍🧑 {client.user_count} users | "
+                f"🕒 {time_now}")
+    else:
+        content = (f"📡 disconnected | "
+                f"{'🔇 Minimal | ' if client.minimal_mode else ''}"
+                f"🕒 {time_now}")
+
+    terminal_width = get_terminal_size().columns
+    padded = content.ljust(terminal_width)
+    return ANSI(
+        f"{padded}"
+    )
+
 async def main():
+    global client 
     client = ChatClient()
     await prompt_loop(client) #cli options
 

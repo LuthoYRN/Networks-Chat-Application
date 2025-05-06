@@ -13,6 +13,11 @@ class ChatClient:
         self.username = None #server assigned username
         self.connected = False
         self.byte_limit = 1460
+        self.dm_count = 0
+        self.joined_channels = set()
+        self.user_count = 0  
+        self.silent_update = False #to update user count 
+        self.minimal_mode = False #suppress server messages
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setblocking(False)
@@ -37,21 +42,21 @@ class ChatClient:
             self.session = response["session"]
             self.username = response["username"]
             self.connected = True
-            server_msg(f"[Server] {response['message']}")  
+            server_msg(f"[Server] {response['message']}",self.minimal_mode)  
         elif response_type == 23 and not response.get("username"):  # DISCONNECT_response
             self.session = None
             self.connected = False
-            server_msg(f"[Server] {response['message']}")  
+            server_msg(f"[Server] {response['message']}",self.minimal_mode)  
         elif response_type == 24:  # PING_response
-            server_msg("[Server] Pong received.")
+            server_msg("[Server] Pong received.",self.minimal_mode)
         elif response_type == 21:  # OK_response
-            server_msg("[Server] OK")
+            server_msg("[Server] OK",self.minimal_mode)
         elif response_type == 20:  # ERROR_response
             error_mesg = response.get("error")
             error_msg(f"[Server] {error_mesg}")
         elif response_type == 36:  # SERVER_MESSAGE
             text = response.get("message")
-            server_msg(f"[Server] {text}")
+            server_msg(f"[Server] {text}",self.minimal_mode)
         elif response_type == 37:  # SERVER_SHUTDOWN
             server_msg("[Server] Shutdown notice received. You may reconnect shortly.")
             self.session = None
@@ -89,6 +94,7 @@ class ChatClient:
         elif response_type == 25:  # CHANNEL_CREATE_response
             channel = response.get("channel")
             desc = response.get("description")
+            self.joined_channels.add(response.get("channel"))
             server_msg(f"[Server] Channel created {BRIGHT_MAGENTA}|{GREY} {channel}: {desc}")
         elif response_type == 28:  # CHANNEL_JOIN_response
             username = response.get("username")
@@ -98,6 +104,7 @@ class ChatClient:
             else:
                 desc = response.get("description")
                 server_msg(f"[Server] You joined {BRIGHT_MAGENTA}|{GREY} {channel}: {desc}")
+                self.joined_channels.add(response.get("channel"))
         elif response_type == 26:  # CHANNEL_LIST_response
             channels = response.get("channels", [])
             next_page = response.get("next_page", False)
@@ -117,6 +124,7 @@ class ChatClient:
                 server_msg(f"[Server] {username} left {channel}")
             else:
                 server_msg(f"[Server] You left {channel}")
+                self.joined_channels.discard(response.get("channel"))
         elif response_type == 27:  # CHANNEL_INFO_response
             channel = response.get("channel")
             description = response.get("description", "")
@@ -131,29 +139,37 @@ class ChatClient:
                 server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY}{user}")
         elif response_type == 35:  # USER_LIST_response
             users = response.get("users", [])
+            self.user_count = len(response.get("users", []))
             next_page = response.get("next_page", False)
 
-            if not users:
-                error_msg("[!] No users found.")
-            else:
-                server_msg(f"[Server] User List ({len(users)})")
-                for u in users:
-                    server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY} {u}")
+            if not self.silent_update:
+                if not users:
+                    error_msg("[!] No users found.")
+                else:
+                    server_msg(f"[Server] User List ({len(users)})")
+                    for u in users:
+                        server_msg(f"[Server]  {BRIGHT_MAGENTA}•  {GREY} {u}")
 
-                if next_page:
-                    progress_msg("[*] More users exist. Try: /users <offset>")
+                    if next_page:
+                        progress_msg("[*] More users exist. Try: /users <offset>")
+            self.silent_update = False
         elif response_type == 33:  # USER_MESSAGE_response
+            self.dm_count += 1
             sender = response.get("from_username", "unknown")
             text = response.get("message", "")
-            mod_print(f"[{CYAN}Direct Message{GREY}] {sender} {BRIGHT_RED}➜ {BRIGHT_YELLOW} {text}")
+            if sender == self.username:
+                sender = "You"
+            mod_print(f"{GREY}[{current_time()}] [{CYAN}Direct Message{GREY}] {sender} {BRIGHT_RED}➜ {BRIGHT_YELLOW} {text}")
         elif response_type == 30:  # CHANNEL_MESSAGE_response
                 sender = response.get("username", "unknown")
+                if sender == self.username:
+                    sender = "You"
                 channel = response.get("channel", "?")
                 text = response.get("message", "")
-                mod_print(f"[{WHITE}Channel | {channel}{GREY}] {sender} {BRIGHT_RED}➜ {BRIGHT_YELLOW} {text}")
+                mod_print(f"{GREY}[{current_time()}] [{WHITE}Channel | {channel}{GREY}] {sender} {BRIGHT_RED}➜ {BRIGHT_YELLOW} {text}")
     #protocol functions
     async def connect(self):
-        progress_msg("[*] Sending CONNECT request...")
+        progress_msg("[*] Sending CONNECT request...",self.minimal_mode)
         request_handle = random.getrandbits(32)
         packet = {
             "request_type": 1,
@@ -169,7 +185,7 @@ class ChatClient:
 
     async def disconnect(self):
         if self.connected:
-            progress_msg("[*] Sending DISCONNECT request...")
+            progress_msg("[*] Sending DISCONNECT request...",self.minimal_mode)
             request_handle = random.getrandbits(32)
             packet = {
                 "request_type": 2,
@@ -215,12 +231,12 @@ class ChatClient:
 
     async def set_username(self,username):
         if self.connected:
-            if not username.startswith("clear-"):
-                error_msg("[!] Invalid username. It must start with 'clear-'.")
-            elif ":" in username:
+            if ":" in username:
                 error_msg("[!] Invalid username. It must not contain ':'.")
             else:
                 request_handle = random.getrandbits(32)
+                if  SERVER_PORT== 51825: #clear-text port
+                    username = f"clear-{username}"
                 packet = {
                     "request_type": 13,
                     "session": self.session,
