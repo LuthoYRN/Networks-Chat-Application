@@ -5,17 +5,17 @@ from cryptography.hazmat.primitives.asymmetric import x25519
 from cryptography.hazmat.primitives import serialization
 
 # Import functions from Task01_keygeneration.py
-from Task01_keygeneration import *
+from KeyGeneration import *
 
 SERVER_HOST = "csc4026z.link"
 SERVER_PORT = 51820
 
-def perform_handshake(sender_index):
+def perform_handshake():
     print("[+] Starting WireGuard handshake process...")
     
     # ======== TASK 2: INITIAL HANDSHAKE ========
     # Generate a random sender index
-    # sender_index = os.urandom(4)
+    sender_index = os.urandom(4)
     msg_type = struct.pack("<B", 1)  # Type 1 for initial handshake
     reserved = b"\x00" * 3
     
@@ -202,7 +202,7 @@ def send_encrypted_message(key_send, message, counter, sender_index):
     counter_bytes = struct.pack("<Q", counter)
     
     # Encrypt the chat message using AEAD
-    encrypted_payload = aead_encrypt(key_send, counter, message, msg_type + reserved + sender_index + counter_bytes)
+    encrypted_payload = aead_encrypt(key_send, counter, message.encode(), msg_type + reserved + sender_index + counter_bytes)
     
     # Construct full transport packet
     transport_packet = msg_type + reserved + sender_index + counter_bytes + encrypted_payload
