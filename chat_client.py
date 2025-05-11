@@ -217,7 +217,7 @@ class ChatClient:
 
     async def whois(self, username: str):
         if self.connected:
-            if not username or len(username) > 20:
+            if not username:
                 error_msg("[!] Invalid username.")
             else:
                 request_handle = random.getrandbits(32)
@@ -334,9 +334,6 @@ class ChatClient:
 
     async def send_dm(self, to_username: str, message: str):
         if self.connected:
-            if len(to_username) > 20:
-                error_msg("[!] Username must be 20 characters or fewer.")
-                return
             if len(message) > 500:
                 error_msg("[!] Message must be 500 characters or fewer.")
                 return
