@@ -2,10 +2,11 @@ import asyncio
 import socket
 import msgpack
 import random
+from Encryption import Encryption
 from utility import *
 
 SERVER_HOST = 'csc4026z.link'
-SERVER_PORT = 51825  #clear text
+SERVER_PORT = 51820 
 
 class ChatClient:
     def __init__(self): #constructor
@@ -18,6 +19,7 @@ class ChatClient:
         self.user_count = 0  
         self.silent_update = False #to update user count 
         self.minimal_mode = False #suppress server messages
+        self.wg = Encryption() #encryption class
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setblocking(False)
@@ -25,13 +27,15 @@ class ChatClient:
 
     def send(self, message: dict):
         packed = msgpack.packb(message)
-        self.sock.sendto(packed, self.server_addr)
+        encrypted = self.wg.encrypt_data(packed)
+        self.sock.sendto(encrypted, self.server_addr)
     #receive loop
     async def receive_loop(self):
         while True:
             try:
                 data, _ = await asyncio.get_event_loop().sock_recvfrom(self.sock, self.byte_limit)
-                message = msgpack.unpackb(data)
+                decrypted = self.wg.decrypt_data(data)
+                message = msgpack.unpackb(decrypted)                   
                 await self.handle_message(message)
             except Exception as e:
                 error_msg(f"[!] Error receiving message: {e}")
@@ -169,19 +173,41 @@ class ChatClient:
                 mod_print(f"{GREY}[{current_time()}] [{WHITE}Channel | {channel}{GREY}] {sender} {BRIGHT_RED}➜ {BRIGHT_YELLOW} {text}")
     #protocol functions
     async def connect(self):
-        progress_msg("[*] Sending CONNECT request...",self.minimal_mode)
-        request_handle = random.getrandbits(32)
-        packet = {
-            "request_type": 1,
-            "request_handle": request_handle
-        }
-        self.send(packet)
+        # Create handshake initiation
+        initiation = self.wg.create_handshake_initiation()
+        self.sock.sendto(initiation, self.server_addr)
         try:
-            data, _ = await asyncio.get_event_loop().sock_recvfrom(self.sock, self.byte_limit)
-            response = msgpack.unpackb(data)        
-            await self.handle_message(response)
+            self.sock.settimeout(5)
+            response, _ = self.sock.recvfrom(self.byte_limit)
+            
+            # Process the response
+            if not self.wg.process_handshake_response(response):
+                error_msg("[!] Failed to process handshake response")
+                return False
+            
+            #Sending the CONNECT request
+            progress_msg("[*] Sending CONNECT request...", self.minimal_mode)
+            request_handle = random.getrandbits(32)
+            packet = {
+                "request_type": 1,
+                "request_handle": request_handle
+            }
+            self.send(packet)
+            # Wait for the CONNECT response
+            response, _ = self.sock.recvfrom(self.byte_limit)
+            decrypted = self.wg.decrypt_data(response)
+            if decrypted:
+                connect_response = msgpack.unpackb(decrypted)
+                await self.handle_message(connect_response)
+                self.sock.setblocking(False)
+                return True
+            else:
+                error_msg("[!] Failed to decrypt CONNECT response")
+                return False
         except Exception as e:
             error_msg(f"[!] Failed to connect: {e}")
+            self.sock.setblocking(False)
+            return False
 
     async def disconnect(self):
         if self.connected:
