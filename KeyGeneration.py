@@ -1,6 +1,4 @@
-# task1.py
 import base64
-import os
 import time
 import struct
 import traceback
